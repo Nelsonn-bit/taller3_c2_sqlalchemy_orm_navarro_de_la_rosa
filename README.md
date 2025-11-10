@@ -19,9 +19,22 @@ source .venv/bin/activate
 pip install sqlalchemy
 ```
 ## Uso
-Ejecutar la interfaz por consola (desde la raíz del proyecto):
+1.Ejecutar la interfaz por consola (desde la raíz del proyecto):
 ```bash
 python -m vista.main
 ```
+Usar el menú para:
+
+Agregar libros
+
+Listar libros
+
+Buscar por autor o categoría
+
+Actualizar precio
+
+Eliminar libros
+
 ## Autor : Nelson Navarro de la Rosa Cod. 20242020116
+
 
