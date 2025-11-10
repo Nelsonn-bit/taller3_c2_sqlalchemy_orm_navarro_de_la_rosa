@@ -2,66 +2,95 @@
 Módulo: vista.main
 Proporciona una interfaz por consola para probar el controlador.
 """
+
 from controlador import operaciones
 
 
 def mostrar_menu() -> None:
     while True:
         print("\n--- GESTOR DE LIBROS (ORM) ---")
-        print("1. Agregar libro")
-        print("2. Listar todos")
-        print("3. Buscar por autor")
-        print("4. Actualizar precio por título")
-        print("5. Eliminar por título")
-        print("6. Salir")
+        print("1. Agregar categoría")
+        print("2. Listar categorías")
+        print("3. Agregar libro")
+        print("4. Listar libros")
+        print("5. Buscar por categoría")
+        print("6. Actualizar precio por título")
+        print("7. Eliminar por título")
+        print("8. Salir")
 
-        op = input("Seleccione una opción: ")
+        op = input("Seleccione una opción: ").strip()
 
         if op == "1":
-            t = input("Título: ")
-            a = input("Autor: ")
-            try:
-                p = float(input("Precio: "))
-                operaciones.agregar(t, a, p)
-            except ValueError:
-                print("Error: el precio debe ser un número. No se agregó el libro.")
+            nombre = input("Nombre de la categoría: ").strip()
+            if operaciones.crear_categoria(nombre):
+                print("Categoría creada.")
+            else:
+                print("Error al crear categoría. ¿Ya existe?")
 
         elif op == "2":
-            libros = operaciones.listar()
-            if libros:
-                print("\nID | Título | Autor | Precio")
-                print("-------------------------------")
-                for x in libros:
-                    print(f"{x.id:<2} {x.titulo:<15} {x.autor:<12} {x.precio:>6.2f}")
+            categorias = operaciones.listar_categorias()
+            if categorias:
+                for c in categorias:
+                    print(c)
             else:
-                print("No hay registros.")
+                print("No hay categorías.")
 
         elif op == "3":
-            a = input("Autor: ")
-            libros = operaciones.buscar_por_autor(a)
-            for x in libros:
-                print(x)
+            titulo = input("Título: ").strip()
+            autor = input("Autor: ").strip()
+            try:
+                precio = float(input("Precio: ").strip())
+            except ValueError:
+                print("El precio debe ser un número.")
+                continue
+            cat_nombre = input("Nombre de la categoría existente: ").strip()
+            categorias = operaciones.listar_categorias()
+            cat_obj = next((x for x in categorias if x.nombre == cat_nombre), None)
+            if not cat_obj:
+                print("Categoría no encontrada. Crea la categoría primero.")
+                continue
+            ok = operaciones.agregar_libro(titulo, autor, precio, cat_obj.id)
+            print("Libro agregado." if ok else "Error al agregar libro.")
 
         elif op == "4":
-            t = input("Título: ")
-            try:
-                np = float(input("Nuevo precio: "))
-                actualizado = operaciones.actualizar_precio(t, np)
-                print("Actualizado." if actualizado else "No se encontró el título.")
-            except ValueError:
-                print("Error: el precio debe ser un número. No se actualizó.")
+            libros = operaciones.listar_libros()
+            if libros:
+                for l in libros:
+                    print(l)
+            else:
+                print("No hay libros.")
 
         elif op == "5":
-            t = input("Título a eliminar: ")
-            n = operaciones.eliminar_por_titulo(t)
-            print(f"Registros eliminados: {n}")
+            cat = input("Nombre de la categoría: ").strip()
+            resultados = operaciones.buscar_por_categoria(cat)
+            if resultados:
+                for l in resultados:
+                    print(l)
+            else:
+                print("No se encontraron libros para esa categoría.")
 
         elif op == "6":
-            print("Fin de la sesión.")
+            titulo = input("Título a actualizar: ").strip()
+            try:
+                nuevo_precio = float(input("Nuevo precio: ").strip())
+            except ValueError:
+                print("El nuevo precio debe ser numérico.")
+                continue
+            actualizado = operaciones.actualizar_precio(titulo, nuevo_precio)
+            print("Actualizado." if actualizado else "No se encontró el título.")
+
+        elif op == "7":
+            titulo = input("Título a eliminar: ").strip()
+            n = operaciones.eliminar_por_titulo(titulo)
+            print(f"Registros eliminados: {n}")
+
+        elif op == "8":
+            print("Saliendo.")
             break
 
         else:
             print("Opción no válida.")
+
 
 if __name__ == "__main__":
     mostrar_menu()

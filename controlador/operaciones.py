@@ -1,31 +1,59 @@
-"""
-Módulo: controlador.operaciones
-Implementa operaciones CRUD y consultas sobre el modelo Libro.
-Incluye manejo explícito de transacciones (commit/rollback) y cierres de sesión.
-"""
-from typing import Iterable, Optional
+"""Operaciones CRUD y utilidades con transacciones seguras y concurrencia."""
+
+from typing import Iterable, List, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select, update, delete
-from modelo.libro import Libro, SessionLocal
+from threading import Lock
+from modelo.libro import Libro, Categoria, SessionLocal, init_db
+
+# Inicializar la base de datos al importar
+init_db()
+
+db_lock = Lock()
 
 
-def agregar(titulo: str, autor: str, precio: float) -> None:
-    """Crea un libro y confirma la transacción."""
+def crear_categoria(nombre: str) -> Optional[Categoria]:
+    """Crea una categoría. Retorna la categoría o None si falla."""
     session = SessionLocal()
     try:
-        nuevo = Libro(titulo=titulo, autor=autor, precio=precio)
-        session.add(nuevo)
-        session.commit()  # Si algo falla, se capturará y se hará rollback
-        print(f"Agregado: {nuevo}")
-    except SQLAlchemyError as e:
+        cat = Categoria(nombre=nombre)
+        session.add(cat)
+        session.commit()
+        session.refresh(cat)
+        return cat
+    except SQLAlchemyError:
         session.rollback()
-        print("Error al agregar. Transacción revertida.")
-        print("Detalle:", e)
+        return None
     finally:
         session.close()
 
 
-def listar() -> Iterable[Libro]:
+def listar_categorias() -> Iterable[Categoria]:
+    """Retorna todas las categorías ordenadas por nombre."""
+    session = SessionLocal()
+    try:
+        stmt = select(Categoria).order_by(Categoria.nombre.asc())
+        return session.scalars(stmt).all()
+    finally:
+        session.close()
+
+
+def agregar_libro(titulo: str, autor: str, precio: float, categoria_id: int) -> bool:
+    """Agrega un libro asociado a categoria_id. Retorna True si OK."""
+    session = SessionLocal()
+    try:
+        nuevo = Libro(titulo=titulo, autor=autor, precio=precio, categoria_id=categoria_id)
+        session.add(nuevo)
+        session.commit()
+        return True
+    except SQLAlchemyError:
+        session.rollback()
+        return False
+    finally:
+        session.close()
+
+
+def listar_libros() -> Iterable[Libro]:
     """Retorna todos los libros ordenados por id."""
     session = SessionLocal()
     try:
@@ -35,35 +63,31 @@ def listar() -> Iterable[Libro]:
         session.close()
 
 
-def buscar_por_autor(autor: str) -> Iterable[Libro]:
-    """Filtra libros por autor exacto."""
+def buscar_por_categoria(categoria_nombre: str) -> List[Libro]:
+    """Retorna libros que pertenecen a la categoría cuyo nombre exacto coincida."""
     session = SessionLocal()
     try:
-        stmt = select(Libro).where(Libro.autor == autor).order_by(Libro.titulo.asc())
+        stmt = (
+            select(Libro)
+            .join(Categoria)
+            .where(Categoria.nombre == categoria_nombre)
+            .order_by(Libro.titulo.asc())
+        )
         return session.scalars(stmt).all()
     finally:
         session.close()
 
 
 def actualizar_precio(titulo: str, nuevo_precio: float) -> bool:
-    """
-    Actualiza el precio del primer libro con ese título.
-    Retorna True si se actualizó algún registro.
-    """
+    """Actualiza el precio del primer libro con ese título. Retorna True si actualizó."""
     session = SessionLocal()
     try:
-        stmt = (
-            update(Libro)
-            .where(Libro.titulo == titulo)
-            .values(precio=nuevo_precio)
-        )
+        stmt = update(Libro).where(Libro.titulo == titulo).values(precio=nuevo_precio)
         result = session.execute(stmt)
         session.commit()
         return result.rowcount > 0
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         session.rollback()
-        print("Error en actualización. Transacción revertida.")
-        print("Detalle:", e)
         return False
     finally:
         session.close()
@@ -77,10 +101,27 @@ def eliminar_por_titulo(titulo: str) -> int:
         result = session.execute(stmt)
         session.commit()
         return result.rowcount or 0
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         session.rollback()
-        print("Error en eliminación. Transacción revertida.")
-        print("Detalle:", e)
         return 0
+    finally:
+        session.close()
+
+
+def agregar_concurrente(titulo: str, autor: str, precio: float, categoria_id: int, lock: Lock = db_lock) -> bool:
+    """
+    Agrega un libro usando lock para proteger add+commit.
+    Cada hilo usa su propia sesión; retorna True si OK.
+    """
+    session = SessionLocal()
+    try:
+        with lock:
+            nuevo = Libro(titulo=titulo, autor=autor, precio=precio, categoria_id=categoria_id)
+            session.add(nuevo)
+            session.commit()
+        return True
+    except SQLAlchemyError:
+        session.rollback()
+        return False
     finally:
         session.close()

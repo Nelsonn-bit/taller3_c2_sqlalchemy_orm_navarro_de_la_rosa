@@ -1,50 +1,53 @@
-"""
-Modúlo: modelo.libro
-Define la clase ORM 'Libro' y configura 
-la conexión a la base de datos.
-"""
+"""Modelos ORM: Categoria y Libro (relación uno-a-muchos)."""
 
-
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, create_engine
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from pathlib import Path
-from sqlalchemy import create_engine, Column, Integer, String , Float
-from sqlalchemy.orm import declarative_base, sessionmaker
-
-
-# 1) Declarative Base : clase base para los modelos ORM
-
-Base = declarative_base()
-
-# 2) Ruta de base de datos ( fuera del có digo fuente )
 
 DATA_DIR = Path("datos")
 DATA_DIR.mkdir(exist_ok=True)
-DB_URL = f"sqlite:///{DATA_DIR / 'libros.db'}.as_posix()"
+DB_URL = f"sqlite:///{(DATA_DIR / 'libros.db').as_posix()}"
 
-# 3) Motor de base de datos: echo=True muestra el SQL generado por el ORM
-engine = create_engine(DB_URL, echo=True, future=True)
 
-# 4) Fabricante de sesiones: cada operación ORM usa su propia sesión
+Base = declarative_base()
+engine = create_engine(DB_URL, echo=False, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 
+class Categoria(Base):
+    """Representa una categoría de libros."""
+
+    __tablename__ = "categorias"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), unique=True, nullable=False)
+
+    libros = relationship("Libro", back_populates="categoria", cascade="all, delete-orphan")
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"Categoria(id={self.id!r}, nombre={self.nombre!r})"
+
+
 class Libro(Base):
-    """
-    Clase ORM que representa la tabla 'libros'.
-    - id: clave primaria autoincremental
-    - titulo: texto no nulo
-    - autor: texto no nulo
-    - precio: valor numérico (float) no nulo
-    """
+    """Representa un libro perteneciente a una categoría."""
 
     __tablename__ = "libros"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    titulo = Column(String, nullable=False)
-    autor = Column(String, nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
+    titulo = Column(String(150), nullable=False)
+    autor = Column(String(100), nullable=False)
     precio = Column(Float, nullable=False)
+    categoria_id = Column(Integer, ForeignKey("categorias.id"), nullable=False)
 
-    def __repr__(self) -> str:
-        return f"<Libro id={self.id} titulo='{self.titulo}' autor='{self.autor}' precio={self.precio:.2f}>"
+    categoria = relationship("Categoria", back_populates="libros")
 
-# 5) Crear las tablas (si no existen)
-Base.metadata.create_all(engine)
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"Libro(id={self.id!r}, titulo={self.titulo!r}, autor={self.autor!r}, "
+            f"precio={self.precio!r}, categoria_id={self.categoria_id!r})"
+        )
+
+
+def init_db() -> None:
+    """Crea las tablas si no existen."""
+    Base.metadata.create_all(bind=engine)
