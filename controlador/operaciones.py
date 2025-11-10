@@ -4,9 +4,10 @@ from typing import Iterable, List, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select, update, delete
 from threading import Lock
-from modelo.libro import Libro, SessionLocal
-from modelo.categoria import Categoria
+from modelo.libro import Libro, Categoria, SessionLocal, init_db
 
+# Inicializar la base de datos al importar
+init_db()
 
 db_lock = Lock()
 

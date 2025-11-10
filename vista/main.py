@@ -4,11 +4,7 @@ Proporciona una interfaz por consola para probar el controlador.
 """
 
 from controlador import operaciones
-from modelo.libro import Base, engine
-from modelo.categoria import Categoria  
 
-Base.metadata.create_all(bind=engine)
-print("Tablas creadas correctamente.")
 
 def mostrar_menu() -> None:
     while True:

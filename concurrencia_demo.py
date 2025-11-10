@@ -37,7 +37,7 @@ def agregar_concurrente(titulo: str, autor: str, precio: float, categoria_id: in
 
     except SQLAlchemyError as e:
         session.rollback()
-        print(f"[{threading.current_thread().name}] ❌ Error. Rollback ejecutado.")
+        print(f"[{threading.current_thread().name}] Error. Rollback ejecutado.")
         print("Detalle:", e)
     finally:
         session.close()
