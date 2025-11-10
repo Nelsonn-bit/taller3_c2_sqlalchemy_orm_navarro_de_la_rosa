@@ -14,4 +14,14 @@ python -m venv .venv
 # Unix/macOS
 source .venv/bin/activate
 ```
+2. Instalar dependencias
+```bash
+pip install sqlalchemy
+```
+## Uso
+Ejecutar la interfaz por consola (desde la raíz del proyecto):
+```bash
+python -m vista.main
+```
 ## Autor : Nelson Navarro de la Rosa Cod. 20242020116
+
